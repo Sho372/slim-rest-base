@@ -1,0 +1,40 @@
+version: '3'
+services:
+  web:
+    container_name: web
+    build: ./web
+    networks:
+      - webnet
+    ports:
+      - "4443:443"
+      - "8080:80"
+    environment:
+      XDEBUG_CONFIG: "xdebug.remote_autostart=1 remote_host=host.docker.internal remote_log=/var/log/xdebug_remote.log"
+    volumes:
+      #非公開ソースをDocumentRootの一階層上に置くための共有フォルダ設定
+      - ./app:/var/www
+      #ローカルのアプリのソースのフォルダ構成とコンテナのフォルダ構成の齟齬。
+      #Apacheで設定されているDocumentRootも共有フォルダにする必要がある
+      #TODO:本来は上の共有設定だけにしたい。あとで修正。
+      - ./app/public:/var/www/public_html
+
+  db:
+    container_name: db
+    image: mysql:5.6
+    env_file: ./db/db.env
+    networks:
+      - webnet
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/log.cnf:/etc/mysql/mysql.conf.d/log.cnf
+      - ./logs:/var/log/mysql
+    entrypoint: ""
+    command: bash -c "chown -R mysql:mysql /var/log/mysql && exec /entrypoint.sh mysqld"
+
+networks:
+  webnet:
+
+volumes:
+    db_data:
